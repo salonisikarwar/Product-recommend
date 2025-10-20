@@ -20,6 +20,10 @@ import ast
 from langchain_core.prompts import PromptTemplate
 from huggingface_hub import InferenceClient # <-- Import direct client
 
+# --- Static File Imports (FOR FIX) ---
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse 
+
 # --- Load environment variables ---
 load_dotenv()
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
@@ -63,6 +67,7 @@ async def lifespan(app: FastAPI):
 
     # 3. Load Product Data
     try:
+        # 'intern_data_ikarus.csv' is in the root
         csv_file_path = "intern_data_ikarus.csv"; print(f"Loading product data from {csv_file_path}...")
         df = pd.read_csv(csv_file_path); df['image_url_list'] = df['images'].apply(parse_image_urls)
         df.set_index('uniq_id', inplace=True)
@@ -94,7 +99,13 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Product Recommendation API", version="0.1.0", lifespan=lifespan)
 
 # --- CORS ---
-origins = ["http://localhost", "http://localhost:3000", "http://localhost:5173"]
+# This list is correct and allows  local server to work
+origins = [
+    "http://localhost", 
+    "http://localhost:3000", 
+    "http://localhost:5173",
+    "http://127.0.0.1:5500"  
+]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 # --- Pydantic Models ---
@@ -118,12 +129,14 @@ def get_hf_client(request: Request):
     return request.app.state.hf_client
 
 # --- API Endpoints ---
-@app.get("/")
-async def read_root(): return {"message": "Welcome!"}
+# NOTE: The root path "/" is now handled by the static file serving below
+@app.get("/api-check")
+async def read_root(): return {"message": "Welcome to the API!"}
 
 @app.get("/analytics")
 async def get_analytics_data():
     try:
+        # Assumes 'analytics_data.json' is in the root
         with open("analytics_data.json", "r") as f: data = json.load(f); return data
     except Exception as e: raise HTTPException(500, f"Error reading analytics: {e}")
 
@@ -175,8 +188,6 @@ def post_recommendations(
                             print("  GenAI returned empty or invalid response.")
                     except StopIteration as si:
                         print(f"!!! Caught StopIteration for ID {product_id}. This is a known issue. Skipping generation.")
-                        # This traceback is useful for your final report/README
-                        # traceback.print_exc() 
                     except Exception as llm_e:
                         print(f"!!! HF Client Error for ID {product_id}: {llm_e.__class__.__name__}: {llm_e}")
 
@@ -197,12 +208,38 @@ def post_recommendations(
         return {"recommendations": recommendations}
 
     except Exception as e:
-        print(f"!!! TOP LEVEL ERROR during recommendation: {e}"); traceback.print_exc()
+        print(f"!!! TOP LEVEL ERROR during recommendation: {e}"); traceback.print_Texc()
         raise HTTPException(status_code=500, detail=f"Failed recommendations: {str(e)}")
 
-# --- Run the server ---
+# --- Deployment/Static File Configuration  ---
+
+# 1. Serve the main index.html for the root route "/"
+@app.get("/", include_in_schema=False)
+async def serve_frontend_root():
+    # Assumes 'index.html' is in the root
+    html_file = "index.html"
+    if not os.path.exists(html_file):
+        print(f"--- WARNING: index.html not found at: {html_file} ---")
+        return {"message": "Welcome to the API. Frontend 'index.html' not found."}
+    return FileResponse(html_file)
+
+# 2. Serve the main index.html for all other routes
+@app.get("/{full_path:path}", include_in_schema=False)
+async def serve_frontend_catchall(request: Request, full_path: str):
+    """Serve the single-page application (SPA) entry point."""
+    html_file = "index.html"
+    if not os.path.exists(html_file):
+        print(f"--- WARNING: index.html not found at: {html_file} ---")
+        return {"message": "Welcome to the API. Frontend 'index.html' not found."}
+    return FileResponse(html_file)
+
+
 if __name__ == "__main__":
-    print("Preparing to start FastAPI server directly...")
+    # The 'PORT' environment variable is set by Render.
+    # It falls back to 8000 for local development.
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Preparing to start FastAPI server on port {port}...")
     try:
-        uvicorn.run(app, host="0.0.0.0", port=8000)
-    except Exception as e: print(f"!!! Error starting Uvicorn server: {e}")
+        uvicorn.run(app, host="0.0.0.0", port=port)
+    except Exception as e: 
+        print(f"!!! Error starting Uvicorn server: {e}")
