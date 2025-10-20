@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Recommendation App</title>
+    
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    
+    <script src="https://unpkg.com/recharts/umd/Recharts.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Simple scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .chart-container { font-size: 12px; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        
+        // --- Configuration ---
+        const API_BASE_URL = "";
+
+        // --- Analytics Page Component ---
+        const AnalyticsPage = () => {
+            // *** FIX ***
+            // Moved this line from the top of the script to inside the component.
+            // This ensures window.Recharts is loaded before we try to use it.
+            const { BarChart, Bar, PieChart, Pie, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } = window.Recharts;
+
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    setLoading(true);
+                    setError(null);
+                    try {
+                        const response = await axios.get(`${API_BASE_URL}/analytics`);
+                        setData(response.data);
+                    } catch (err) {
+                        setError("Failed to fetch analytics data. Is the backend server running?");
+                        console.error("Analytics fetch error:", err);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+                fetchData();
+            }, []);
+
+            if (loading) return <div className="p-8 text-center text-gray-500">Loading analytics...</div>;
+            if (error) return <div className="p-8 text-center text-red-600 font-semibold">{error}</div>;
+            if (!data || !data.top_categories || !data.top_brands) return <div className="p-8 text-center">No analytics data available.</div>;
+
+            const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658'];
+
+            const categoryData = data.top_categories.labels.map((label, index) => ({
+                name: label.length > 20 ? label.substring(0, 20) + '...' : label,
+                products: data.top_categories.values[index]
+            }));
+
+            const brandData = data.top_brands.labels.map((label, index) => ({
+                name: label,
+                value: data.top_brands.values[index]
+            }));
+
+            return (
+                <div className="p-4 md:p-8 chart-container bg-gray-50 min-h-full">
+                    <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Product Analytics Dashboard</h1>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 max-w-6xl mx-auto">
+                        <div className="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition-transform">
+                            <h3 className="text-lg font-semibold text-gray-500">Total Products</h3>
+                            <p className="text-5xl font-bold text-blue-600 mt-2">{data.summary_stats?.total_products || 'N/A'}</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition-transform">
+                            <h3 className="text-lg font-semibold text-gray-500">Average Price</h3>
+                            <p className="text-5xl font-bold text-green-600 mt-2">${data.summary_stats?.average_price?.toFixed(2) || 'N/A'}</p>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg text-center transform hover:scale-105 transition-transform">
+                            <h3 className="text-lg font-semibold text-gray-500">Unique Brands</h3>
+                            <p className="text-5xl font-bold text-purple-600 mt-2">{data.summary_stats?.unique_brands || 'N/A'}</p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+                        <div className="bg-white p-6 rounded-xl shadow-lg">
+                            <h2 className="text-xl font-bold text-gray-700 mb-4">Top Product Categories</h2>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <BarChart data={categoryData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" />
+                                    <XAxis type="number" />
+                                    <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 11 }}/>
+                                    <Tooltip />
+                                    <Legend />
+                                    <Bar dataKey="products" name="Number of Products" fill="#8884d8" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-lg flex flex-col items-center">
+                             <h2 className="text-xl font-bold text-gray-700 mb-4">Top Brands Distribution</h2>
+                            <ResponsiveContainer width="100%" height={400}>
+                                <PieChart>
+                                    <Pie data={brandData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={150} fill="#8884d8" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                                        {brandData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Recommendation Page Component ---
+        const RecommendationPage = () => {
+            const [messages, setMessages] = useState([
+                { from: 'bot', text: 'Hello! How can I help you find the perfect furniture today? Try "a modern floor lamp" or "a small wooden desk".' }
+            ]);
+            const [inputValue, setInputValue] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };
+
+            useEffect(scrollToBottom, [messages, isLoading]);
+
+            const handleSendMessage = async (e) => {
+                e.preventDefault();
+                if (!inputValue.trim() || isLoading) return;
+
+                const userMessage = { from: 'user', text: inputValue };
+                setMessages(prev => [...prev, userMessage]);
+                setInputValue('');
+                setIsLoading(true);
+
+                try {
+                    const response = await axios.post(`${API_BASE_URL}/recommend`, {
+                        query: inputValue,
+                        top_k: 8 // Fetch a few more for the scrollable list
+                    });
+                    
+                    const recommendations = response.data.recommendations;
+                    const botMessage = { from: 'bot', recommendations: recommendations };
+                    setMessages(prev => [...prev, botMessage]);
+
+                } catch (error) {
+                    const errorMessageText = error.response ? `Error: ${error.response.status} ${error.response.data.detail}` : "Sorry, the backend server is not responding. Please ensure it's running.";
+                    const errorMessage = { from: 'bot', text: errorMessageText };
+                    setMessages(prev => [...prev, errorMessage]);
+                    console.error("API Error:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            
+            const ProductCard = ({ product }) => (
+                <div className="bg-white rounded-lg shadow-md overflow-hidden w-60 flex-shrink-0 border">
+                    <img 
+                        src={product.imageUrl || 'https://placehold.co/400x300/e2e8f0/e2e8f0?text=Image'} 
+                        alt={product.title} 
+                        className="w-full h-40 object-cover"
+                        onError={(e) => { e.target.onerror = null; e.target.src='https://placehold.co/400x300/e2e8f0/e2e8f0?text=Image'; }}
+                    />
+                    <div className="p-3">
+                        <h3 className="font-bold text-sm text-gray-800 truncate" title={product.title}>{product.title}</h3>
+                        <p className="text-lg font-semibold text-gray-900 my-1">{product.price}</p>
+                        <p className="text-xs text-gray-600 h-16 overflow-y-auto">{product.generated_description}</p>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="flex flex-col h-full bg-gray-200">
+                    <div className="flex-grow p-4 overflow-y-auto">
+                        {messages.map((msg, index) => (
+                            <div key={index} className={`flex ${msg.from === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+                                <div className={`rounded-lg px-4 py-3 shadow-md ${msg.from === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800'}`}>
+                                    {msg.text && <p>{msg.text}</p>}
+                                    {msg.recommendations && (
+                                        <div>
+                                            <p className="mb-3 font-medium">Here are some recommendations I found for you:</p>
+                                            <div className="flex space-x-4 overflow-x-auto p-2 -mx-2">
+                                                {msg.recommendations.length > 0 ? (
+                                                    msg.recommendations.map(product => <ProductCard key={product.id} product={product} />)
+                                                ) : (
+                                                    <p className="text-sm text-gray-500">I couldn't find any specific matches. Please try a different query!</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                         {isLoading && (
+                            <div className="flex justify-start mb-4">
+                                <div className="rounded-lg px-4 py-2 bg-white text-gray-800 shadow-md">
+                                    <div className="flex items-center space-x-2">
+                                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse"></div>
+                                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse [animation-delay:0.2s]"></div>
+                                        <div className="w-2 h-2 bg-gray-500 rounded-full animate-pulse [animation-delay:0.4s]"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={messagesEndRef} />
+                    </div>
+                    <form onSubmit={handleSendMessage} className="p-4 bg-white border-t-2">
+                        <div className="flex rounded-md shadow-sm">
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                className="flex-grow border-gray-300 rounded-l-md p-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="e.g., 'a dark wood coffee table'..."
+                                disabled={isLoading}
+                                autoFocus
+                            />
+                            <button
+                                type="submit"
+                                className="bg-blue-600 text-white px-6 py-2 rounded-r-md disabled:bg-blue-300 hover:bg-blue-700 transition-colors"
+                                disabled={isLoading}
+                            >
+                                Send
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            );
+        };
+
+        // --- Main App Component with Simple Routing ---
+        const App = () => {
+            const [page, setPage] = useState('recommendations'); // 'recommendations' or 'analytics'
+
+            return (
+                <div className="h-screen flex flex-col font-sans">
+                    <header className="bg-white shadow-md p-4 flex justify-between items-center z-10">
+                        <h1 className="text-2xl font-bold text-gray-800">Furniture Finder AI</h1>
+                        <nav>
+                            <button
+                                onClick={() => setPage('recommendations')}
+                                className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${page === 'recommendations' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            >
+                                Recommendations
+                            </button>
+                            <button
+                                onClick={() => setPage('analytics')}
+                                className={`ml-4 px-4 py-2 rounded-md text-sm font-medium transition-colors ${page === 'analytics' ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-100'}`}
+                            >
+                                Analytics
+                            </button>
+                        </nav>
+                    </header>
+                    <main className="flex-grow overflow-hidden bg-gray-100">
+                        {page === 'recommendations' ? <RecommendationPage /> : <AnalyticsPage />}
+                    </main>
+                </div>
+            );
+        };
+
+        // --- Render the app ---
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
+
+    </script>
+</body>
+</html>
