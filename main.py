@@ -208,7 +208,8 @@ def post_recommendations(
         return {"recommendations": recommendations}
 
     except Exception as e:
-        print(f"!!! TOP LEVEL ERROR during recommendation: {e}"); traceback.print_Texc()
+        # --- Corrected line ---
+        print(f"!!! TOP LEVEL ERROR during recommendation: {e}"); traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed recommendations: {str(e)}")
 
 # --- Deployment/Static File Configuration  ---
@@ -243,3 +244,4 @@ if __name__ == "__main__":
         uvicorn.run(app, host="0.0.0.0", port=port)
     except Exception as e: 
         print(f"!!! Error starting Uvicorn server: {e}")
+
