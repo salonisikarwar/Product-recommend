@@ -1,0 +1,54 @@
+{
+    "summary_stats": {
+        "total_products": 312,
+        "average_price": 64.06,
+        "median_price": 59.95,
+        "unique_brands": 264
+    },
+    "top_categories": {
+        "labels": [
+            "Home & Kitchen",
+            "Patio, Lawn & Garden",
+            "Tools & Home Improvement",
+            "Electronics",
+            "Baby Products",
+            "Beauty & Personal Care",
+            "Office Products"
+        ],
+        "values": [
+            254,
+            23,
+            17,
+            6,
+            6,
+            4,
+            2
+        ]
+    },
+    "top_brands": {
+        "labels": [
+            "MoNiBloom Store",
+            "Flash Furniture Store",
+            "HomePop Store",
+            "Caroline's Treasures Store",
+            "Kingston Brass Store",
+            "Convenience Concepts Store",
+            "LOVMOR",
+            "Adeco Store",
+            "Christopher Knight Home Store",
+            "Way Basics Store"
+        ],
+        "values": [
+            5,
+            5,
+            4,
+            4,
+            4,
+            3,
+            2,
+            2,
+            2,
+            2
+        ]
+    }
+}
