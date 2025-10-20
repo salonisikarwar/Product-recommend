@@ -1,28 +1,9 @@
---- FastAPI and Core Utilities ---
-
 fastapi
-uvicorn[standard]
+uvicorn
 python-dotenv
-pydantic
-pydantic-settings
-python-multipart  # Generally useful for FastAPI applications
-
---- AI / ML Dependencies ---
-
-PyTorch: The underlying framework required by the CLIP model
-
-torch
-
-Sentence Transformers: Used in your Kaggle notebook for CLIP embeddings
-
-sentence-transformers
-
-Transformers: The library that contains the base CLIP model components
-
-transformers
-
---- Vector Database Client ---
-
-IMPORTANT: Use 'pinecone', NOT the deprecated 'pinecone-client'
-
+pandas
 pinecone
+sentence-transformers
+torch
+langchain-core
+huggingface-hub
