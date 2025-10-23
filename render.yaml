@@ -2,11 +2,11 @@ services:
   - type: web
     name: product-recommender
     runtime: python
-    plan: free
+    plan: free # Use the free plan
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "python -m uvicorn main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: PINECONE_API_KEY
-        sync: false
+        sync: false # Set this in the Render dashboard
       - key: HUGGINGFACEHUB_API_TOKEN
-        sync: false
+        sync: false # Set this in the Render dashboard
